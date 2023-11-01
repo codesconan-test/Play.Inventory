@@ -1,6 +1,7 @@
 using Play.Common.Data;
 using Play.Common.Repositories;
 using Play.Common.Repositories.Interfaces;
+using Play.Inventory.Clients;
 using Play.Inventory.Data.Contexts;
 using Play.Inventory.Entities;
 
@@ -18,9 +19,12 @@ builder.Services.AddScoped< IItemContext<InventoryItem>, InventoryContext>();
 
 // repository
 builder.Services.AddScoped<IItemRepository<InventoryItem>, ItemRepository<InventoryItem>>();
-
-// repository: inventory repository
-
+ 
+// catalog client
+builder.Services.AddHttpClient<CatalogClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5001");
+});
 
 var app = builder.Build();
 
