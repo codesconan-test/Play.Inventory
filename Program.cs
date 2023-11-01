@@ -4,6 +4,8 @@ using Play.Common.Repositories.Interfaces;
 using Play.Inventory.Clients;
 using Play.Inventory.Data.Contexts;
 using Play.Inventory.Entities;
+using Polly;
+using Polly.Timeout;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,12 +21,27 @@ builder.Services.AddScoped< IItemContext<InventoryItem>, InventoryContext>();
 
 // repository
 builder.Services.AddScoped<IItemRepository<InventoryItem>, ItemRepository<InventoryItem>>();
+
+var jitter = new Random();
  
-// catalog client
+// catalog client 
 builder.Services.AddHttpClient<CatalogClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5001");
-});
+    client.BaseAddress = new Uri("https://localhost:5000");
+})
+    .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.Or<TimeoutRejectedException>().WaitAndRetryAsync(5, 
+        retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) + TimeSpan.FromMilliseconds(jitter.Next(0, 1000)),
+        onRetry: (outcome, timespan, retryAttempt) =>
+        {
+            var serviceProvider = builder.Services.BuildServiceProvider();
+            serviceProvider.GetService<ILogger<CatalogClient>>()!.LogWarning(
+                "Delaying for {delay}ms, then making retry {retry}.",
+                timespan.TotalMilliseconds,
+                retryAttempt
+            );
+        }
+        ))
+    .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(2)));
 
 var app = builder.Build();
 

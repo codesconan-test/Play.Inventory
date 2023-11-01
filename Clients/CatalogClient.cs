@@ -15,7 +15,7 @@ public class CatalogClient
     public async Task<DtOs.CatalogItemDto?> GetCatalogItemAsync(Guid id)
     {
         var response = await _httpClient.GetAsync($"items/{id}");
-        if (response.IsSuccessStatusCode)
+        if(response.IsSuccessStatusCode)
         {
             return await response.Content.ReadFromJsonAsync<DtOs.CatalogItemDto>();
         }
